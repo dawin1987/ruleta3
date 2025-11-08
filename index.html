@@ -3,20 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta de Nombres</title>
+    <title>Ruleta de Nombres Dinámica</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --accent: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4cc9f0;
+            --warning: #f8961e;
+            --danger: #e63946;
+            --gray: #6c757d;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: var(--light);
             min-height: 100vh;
             padding: 20px;
-            color: #333;
         }
 
         .container {
@@ -24,747 +39,1038 @@
             margin: 0 auto;
         }
 
-        h1 {
+        header {
             text-align: center;
-            color: white;
             margin-bottom: 30px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         }
 
-        /* Vista de Anfitrión */
-        #hostView {
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, var(--accent), var(--success));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        .app-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
         }
 
-        .card {
-            background: white;
+        @media (max-width: 900px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         }
 
-        .card h2 {
-            margin-bottom: 15px;
-            color: #667eea;
-            font-size: 1.5em;
+        .panel-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
         }
 
-        #wheelSection {
-            grid-column: 1 / 2;
-            grid-row: 1 / 3;
+        /* Ruleta Styles */
+        .ruleta-container {
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            position: relative;
         }
 
-        #wheelCanvas {
-            max-width: 100%;
-            border-radius: 50%;
-            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+        .ruleta-wrapper {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            margin: 0 auto 30px;
         }
 
-        .arrow {
-            width: 0;
-            height: 0;
-            border-left: 20px solid transparent;
-            border-right: 20px solid transparent;
-            border-top: 40px solid #ff4757;
-            margin-top: -20px;
-            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
-        }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        button {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-success {
-            background: #2ecc71;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #27ae60;
-        }
-
-        .btn-danger {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c0392b;
-        }
-
-        .btn-spin {
+        #ruletaCanvas {
             width: 100%;
-            padding: 20px;
-            font-size: 20px;
-            margin-top: 20px;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 5s cubic-bezier(0.2, 0.8, 0.3, 1);
+        }
+
+        .ruleta-pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background: var(--accent);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            z-index: 10;
         }
 
         .controls {
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
-        .controls button {
-            flex: 1;
-        }
-
-        .participant-list, .winner-list {
-            list-style: none;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .participant-item, .winner-item {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 8px;
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            gap: 10px;
-            background: #f8f9fa;
+            gap: 8px;
         }
 
-        .color-badge {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        .btn-primary {
+            background: var(--primary);
+            color: white;
         }
 
-        #qrSection {
-            text-align: center;
+        .btn-primary:hover {
+            background: var(--secondary);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        #qrCode {
-            display: inline-block;
-            padding: 15px;
-            background: white;
-            border-radius: 10px;
-            margin: 15px 0;
+        .btn-success {
+            background: var(--success);
+            color: white;
         }
 
-        .game-id {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #667eea;
-            margin: 10px 0;
+        .btn-success:hover {
+            background: #3aa8d8;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        /* Vista de Participante */
-        #participantView {
-            display: none;
-            max-width: 500px;
-            margin: 0 auto;
+        .btn-warning {
+            background: var(--warning);
+            color: white;
         }
 
-        #participantView .card {
-            text-align: center;
+        .btn-warning:hover {
+            background: #e0861b;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        #participantView h1 {
-            font-size: 2em;
-            margin-bottom: 20px;
+        .btn-danger {
+            background: var(--danger);
+            color: white;
         }
 
-        #participantView input {
-            width: 100%;
+        .btn-danger:hover {
+            background: #d32f2f;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Form Styles */
+        .form-group {
             margin-bottom: 15px;
         }
 
-        #participantView button {
+        .form-control {
             width: 100%;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
         }
 
-        .message {
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* List Styles */
+        .list-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .list-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(5px);
+        }
+
+        .list-item-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-edit:hover {
+            color: var(--success);
+        }
+
+        .btn-delete:hover {
+            color: var(--danger);
+        }
+
+        /* QR Styles */
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            font-weight: bold;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
         }
 
-        .message.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+        #qrcode {
+            margin: 15px 0;
         }
 
-        .message.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        .session-info {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.9rem;
+            opacity: 0.8;
         }
 
-        /* Modal de Ganador */
-        #winnerModal {
-            display: none;
+        /* Winner Announcement */
+        .winner-modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
             justify-content: center;
             align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
         }
 
-        .modal-content {
-            background: white;
-            padding: 50px;
+        .winner-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .winner-content {
+            background: linear-gradient(135deg, #3a0ca3, #4361ee);
+            padding: 40px;
             border-radius: 20px;
             text-align: center;
-            animation: modalPop 0.5s ease-out;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5);
+            transform: scale(0.7);
+            transition: transform 0.5s ease;
         }
 
-        @keyframes modalPop {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
+        .winner-modal.active .winner-content {
+            transform: scale(1);
         }
 
-        .modal-content h2 {
-            font-size: 3em;
-            color: #667eea;
+        .winner-title {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .winner-name {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 20px 0;
+            background: linear-gradient(45deg, #f72585, #4cc9f0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
             margin-bottom: 20px;
         }
 
-        .modal-content .winner-name {
-            font-size: 2.5em;
-            color: #f5576c;
-            font-weight: bold;
+        .status-open {
+            background: var(--success);
         }
 
-        .modal-content button {
-            margin-top: 30px;
+        .status-closed {
+            background: var(--danger);
         }
 
-        @media (max-width: 768px) {
-            #hostView {
-                grid-template-columns: 1fr;
-            }
+        .empty-message {
+            text-align: center;
+            padding: 30px;
+            opacity: 0.7;
+            font-style: italic;
+        }
 
-            #wheelSection {
-                grid-column: 1;
-                grid-row: auto;
-            }
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .spinning {
+            animation: spin 0.5s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎡 Ruleta de Nombres</h1>
+        <header>
+            <h1>Ruleta de Nombres Dinámica</h1>
+            <p class="subtitle">Gira la ruleta y descubre al ganador - Comparte el código QR para participación remota</p>
+        </header>
 
-        <!-- Vista de Anfitrión -->
-        <div id="hostView">
-            <div class="card" id="wheelSection">
-                <h2>Ruleta</h2>
-                <canvas id="wheelCanvas" width="400" height="400"></canvas>
-                <div class="arrow"></div>
-                <button id="spinBtn" class="btn-primary btn-spin" disabled>🎲 GIRAR RULETA</button>
-            </div>
-
-            <div class="card">
-                <h2>Añadir Participante</h2>
-                <div class="input-group">
-                    <input type="text" id="participantInput" placeholder="Nombre del participante" disabled>
-                    <button id="addBtn" class="btn-success" disabled>Añadir</button>
+        <div class="app-container">
+            <!-- Panel izquierdo: Ruleta y controles -->
+            <div class="panel">
+                <h2 class="panel-title">Ruleta</h2>
+                <div class="ruleta-container">
+                    <div class="ruleta-wrapper">
+                        <div class="ruleta-pointer"></div>
+                        <canvas id="ruletaCanvas" width="400" height="400"></canvas>
+                    </div>
+                    
+                    <div class="controls">
+                        <button id="spinBtn" class="btn btn-primary">
+                            <i class="icon">↻</i> Girar Ruleta
+                        </button>
+                        <button id="newGameBtn" class="btn btn-success">
+                            <i class="icon">🆕</i> Nuevo Juego
+                        </button>
+                        <button id="endGameBtn" class="btn btn-danger">
+                            <i class="icon">⏹️</i> Finalizar Juego
+                        </button>
+                    </div>
                 </div>
+            </div>
 
-                <h2 style="margin-top: 20px;">Controles del Juego</h2>
-                <div class="controls">
-                    <button id="newGameBtn" class="btn-primary">Nuevo Juego</button>
-                    <button id="endGameBtn" class="btn-danger" disabled>Finalizar</button>
+            <!-- Panel derecho: Gestión de participantes y ganadores -->
+            <div class="panel">
+                <h2 class="panel-title">Gestión de Participantes</h2>
+                
+                <div class="form-group">
+                    <input type="text" id="participantName" class="form-control" placeholder="Ingresa el nombre del participante">
                 </div>
-            </div>
-
-            <div class="card">
-                <h2>Participantes (<span id="participantCount">0</span>)</h2>
-                <ul id="participantList" class="participant-list"></ul>
-            </div>
-
-            <div class="card">
-                <h2>Ganadores</h2>
-                <ul id="winnerList" class="winner-list"></ul>
-            </div>
-
-            <div class="card" id="qrSection">
-                <h2>Código QR del Juego</h2>
-                <p>Los participantes pueden escanear este código para unirse:</p>
-                <div id="qrCode"></div>
-                <div class="game-id">ID: <span id="gameIdDisplay">-</span></div>
-            </div>
-        </div>
-
-        <!-- Vista de Participante -->
-        <div id="participantView">
-            <div class="card">
-                <h1>🎉 Únete al Juego</h1>
-                <input type="text" id="participantNameInput" placeholder="Escribe tu nombre">
-                <button id="joinBtn" class="btn-primary">Enviar</button>
-                <div id="participantMessage"></div>
-            </div>
-        </div>
-
-        <!-- Modal de Ganador -->
-        <div id="winnerModal">
-            <div class="modal-content">
-                <h2>🎉 ¡GANADOR! 🎉</h2>
-                <div class="winner-name" id="winnerName"></div>
-                <button class="btn-primary" onclick="closeWinnerModal()">Cerrar</button>
+                <button id="addParticipantBtn" class="btn btn-primary" style="width: 100%;">
+                    <i class="icon">➕</i> Agregar Participante
+                </button>
+                
+                <div class="list-container" id="participantsList">
+                    <!-- Los participantes se cargarán aquí dinámicamente -->
+                </div>
+                
+                <h2 class="panel-title" style="margin-top: 30px;">Ganadores</h2>
+                <div class="list-container" id="winnersList">
+                    <!-- Los ganadores se cargarán aquí dinámicamente -->
+                </div>
+                
+                <div class="qr-container">
+                    <h3>Código QR para Participación</h3>
+                    <div id="qrcode"></div>
+                    <div class="session-info">
+                        <p>ID de Sesión: <span id="sessionId">No iniciada</span></p>
+                        <p>Estado: <span id="gameStatus" class="game-status status-closed">Cerrado</span></p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    
+    <!-- Modal de Ganador -->
+    <div class="winner-modal" id="winnerModal">
+        <div class="winner-content">
+            <h2 class="winner-title">¡Tenemos un ganador!</h2>
+            <div class="winner-name" id="winnerName">Nombre del Ganador</div>
+            <div class="controls">
+                <button id="closeWinnerBtn" class="btn btn-primary">Cerrar</button>
+                <button id="removeWinnerBtn" class="btn btn-danger">Eliminar Ganador</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
     <script type="module">
-        // Importar Firebase
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getAuth, signInWithCustomToken, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // Variables globales de Firebase
-        const appId = window.__app_id;
-        const firebaseConfig = window.__firebase_config;
-        const initialAuthToken = window.__initial_auth_token;
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBTxReRfBSmVHM8kDQl9ZJ0I0Lh7SQOksI",
+            authDomain: "ruleta1-4e14a.firebaseapp.com",
+            projectId: "ruleta1-4e14a",
+            storageBucket: "ruleta1-4e14a.firebasestorage.app",
+            messagingSenderId: "44092913243",
+            appId: "1:44092913243:web:bb1b54cf2f0e813265317e",
+            measurementId: "G-4CLSSVQV7M"
+        };
 
-        // Inicializar Firebase
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        const database = getDatabase(app);
 
-        // Autenticar
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            await signInAnonymously(auth);
-        }
+        // Hacer la base de datos disponible globalmente
+        window.firebaseDatabase = database;
+    </script>
 
-        // Estado de la aplicación
-        let currentGameId = null;
-        let currentParticipants = [];
-        let currentWinners = [];
+    <script>
+        // Variables globales
+        let currentSessionId = null;
+        let participants = [];
+        let winners = [];
         let isSpinning = false;
-        let unsubscribe = null;
-        let qrCodeInstance = null;
+        let gameStatus = 'closed'; // 'open' or 'closed'
+        let ruletaChart = null;
+        let currentWinner = null;
 
-        // Canvas y ruleta
-        const canvas = document.getElementById('wheelCanvas');
-        const ctx = canvas.getContext('2d');
-        let currentAngle = 0;
+        // Colores para los segmentos de la ruleta
+        const segmentColors = [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+            '#9966FF', '#FF9F40', '#8AC926', '#1982C4',
+            '#6A4C93', '#F15BB5', '#00BBF9', '#00F5D4'
+        ];
 
-        // Detectar vista (Anfitrión o Participante)
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameIdFromUrl = urlParams.get('juego');
+        // Inicialización cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+        });
 
-        if (gameIdFromUrl) {
-            // Vista de Participante
-            showParticipantView(gameIdFromUrl);
-        } else {
-            // Vista de Anfitrión
-            showHostView();
+        function initializeApp() {
+            // Intentar cargar datos de localStorage
+            loadFromLocalStorage();
+            
+            // Si no hay sesión activa, crear una nueva
+            if (!currentSessionId) {
+                createNewGame();
+            } else {
+                // Cargar datos de Firebase para la sesión actual
+                loadSessionData();
+            }
+            
+            // Dibujar la ruleta inicial
+            drawRuleta();
         }
 
-        // ============= VISTA DE ANFITRIÓN =============
-        function showHostView() {
-            document.getElementById('hostView').style.display = 'grid';
-            document.getElementById('participantView').style.display = 'none';
-
-            // Event Listeners
+        function setupEventListeners() {
+            // Botones principales
+            document.getElementById('spinBtn').addEventListener('click', spinRuleta);
             document.getElementById('newGameBtn').addEventListener('click', createNewGame);
-            document.getElementById('addBtn').addEventListener('click', addParticipantByHost);
-            document.getElementById('spinBtn').addEventListener('click', spinWheel);
             document.getElementById('endGameBtn').addEventListener('click', endGame);
-
-            // Enter key para añadir participante
-            document.getElementById('participantInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') addParticipantByHost();
+            
+            // Gestión de participantes
+            document.getElementById('addParticipantBtn').addEventListener('click', addParticipant);
+            document.getElementById('participantName').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addParticipant();
             });
-
-            drawWheel();
+            
+            // Modal de ganador
+            document.getElementById('closeWinnerBtn').addEventListener('click', closeWinnerModal);
+            document.getElementById('removeWinnerBtn').addEventListener('click', removeCurrentWinner);
         }
 
-        async function createNewGame() {
-            try {
-                // Limpiar listener anterior
-                if (unsubscribe) unsubscribe();
+        function createNewGame() {
+            // Generar un nuevo ID de sesión
+            currentSessionId = 'session_' + Date.now();
+            
+            // Reiniciar arrays
+            participants = [];
+            winners = [];
+            gameStatus = 'open';
+            
+            // Actualizar la UI
+            updateSessionInfo();
+            updateParticipantsList();
+            updateWinnersList();
+            drawRuleta();
+            generateQRCode();
+            
+            // Guardar en localStorage
+            saveToLocalStorage();
+            
+            // Inicializar en Firebase
+            initializeFirebaseSession();
+            
+            // Mostrar mensaje de éxito
+            alert('Nuevo juego creado con ID: ' + currentSessionId);
+        }
 
-                currentGameId = Date.now().toString();
-                const gameRef = doc(db, `artifacts/${appId}/public/data/games`, currentGameId);
+        function initializeFirebaseSession() {
+            if (!window.firebaseDatabase) {
+                console.error('Firebase no está inicializado');
+                return;
+            }
+            
+            const database = window.firebaseDatabase;
+            const sessionRef = ref(database, 'sessions/' + currentSessionId);
+            
+            // Crear la sesión en Firebase
+            set(sessionRef, {
+                createdAt: new Date().toISOString(),
+                status: gameStatus,
+                participants: {},
+                winners: {}
+            });
+            
+            // Escuchar cambios en los participantes
+            const participantsRef = ref(database, 'sessions/' + currentSessionId + '/participants');
+            onValue(participantsRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Convertir objeto a array
+                    const remoteParticipants = Object.keys(data).map(key => {
+                        return { id: key, ...data[key] };
+                    });
+                    
+                    // Actualizar participantes locales
+                    participants = remoteParticipants;
+                    updateParticipantsList();
+                    drawRuleta();
+                }
+            });
+            
+            // Escuchar cambios en los ganadores
+            const winnersRef = ref(database, 'sessions/' + currentSessionId + '/winners');
+            onValue(winnersRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Convertir objeto a array
+                    const remoteWinners = Object.keys(data).map(key => {
+                        return { id: key, ...data[key] };
+                    });
+                    
+                    // Actualizar ganadores locales
+                    winners = remoteWinners;
+                    updateWinnersList();
+                }
+            });
+        }
 
-                await setDoc(gameRef, {
-                    gameId: currentGameId,
-                    status: 'open',
-                    participants: [],
-                    winners: []
-                });
-
-                // Generar QR
-                const gameUrl = window.location.origin + window.location.pathname + '?juego=' + currentGameId;
-                document.getElementById('qrCode').innerHTML = '';
-                qrCodeInstance = new QRCode(document.getElementById('qrCode'), {
-                    text: gameUrl,
-                    width: 200,
-                    height: 200
-                });
-
-                document.getElementById('gameIdDisplay').textContent = currentGameId;
-
-                // Habilitar controles
-                document.getElementById('participantInput').disabled = false;
-                document.getElementById('addBtn').disabled = false;
-                document.getElementById('endGameBtn').disabled = false;
-
-                // Listener en tiempo real
-                unsubscribe = onSnapshot(gameRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        currentParticipants = data.participants || [];
-                        currentWinners = data.winners || [];
-                        updateUI();
+        function loadSessionData() {
+            if (!window.firebaseDatabase || !currentSessionId) return;
+            
+            const database = window.firebaseDatabase;
+            
+            // Cargar datos de la sesión
+            const sessionRef = ref(database, 'sessions/' + currentSessionId);
+            onValue(sessionRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    gameStatus = data.status;
+                    updateSessionInfo();
+                    
+                    // Si el juego está cerrado, deshabilitar ciertas funciones
+                    if (gameStatus === 'closed') {
+                        document.getElementById('addParticipantBtn').disabled = true;
+                        document.getElementById('participantName').disabled = true;
                     }
-                });
-
-                alert('¡Nuevo juego creado! Comparte el código QR con los participantes.');
-            } catch (error) {
-                console.error('Error al crear juego:', error);
-                alert('Error al crear el juego. Por favor, intenta de nuevo.');
-            }
+                }
+            });
         }
 
-        async function addParticipantByHost() {
-            const input = document.getElementById('participantInput');
-            const name = input.value.trim();
-
-            if (!name) {
-                alert('Por favor, escribe un nombre.');
+        function addParticipant() {
+            if (gameStatus === 'closed') {
+                alert('El juego está cerrado. No se pueden agregar más participantes.');
                 return;
             }
-
-            if (!currentGameId) {
-                alert('Primero debes crear un nuevo juego.');
+            
+            const nameInput = document.getElementById('participantName');
+            const name = nameInput.value.trim();
+            
+            if (name === '') {
+                alert('Por favor, ingresa un nombre válido.');
                 return;
             }
-
-            try {
-                const gameRef = doc(db, `artifacts/${appId}/public/data/games`, currentGameId);
-                const color = getRandomColor();
-
-                await updateDoc(gameRef, {
-                    participants: arrayUnion({ name, color })
+            
+            // Crear nuevo participante
+            const newParticipant = {
+                id: 'participant_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                name: name,
+                color: segmentColors[participants.length % segmentColors.length],
+                addedAt: new Date().toISOString()
+            };
+            
+            // Agregar a la lista local
+            participants.push(newParticipant);
+            
+            // Si Firebase está disponible, sincronizar
+            if (window.firebaseDatabase && currentSessionId) {
+                const database = window.firebaseDatabase;
+                const participantRef = ref(database, 'sessions/' + currentSessionId + '/participants/' + newParticipant.id);
+                set(participantRef, {
+                    name: newParticipant.name,
+                    color: newParticipant.color,
+                    addedAt: newParticipant.addedAt
                 });
-
-                input.value = '';
-            } catch (error) {
-                console.error('Error al añadir participante:', error);
-                alert('Error al añadir participante.');
             }
+            
+            // Limpiar el campo de entrada
+            nameInput.value = '';
+            
+            // Actualizar la UI
+            updateParticipantsList();
+            drawRuleta();
+            saveToLocalStorage();
         }
 
-        function updateUI() {
-            // Actualizar contador
-            document.getElementById('participantCount').textContent = currentParticipants.length;
-
-            // Actualizar lista de participantes
-            const participantList = document.getElementById('participantList');
-            participantList.innerHTML = '';
-            currentParticipants.forEach(p => {
-                const li = document.createElement('li');
-                li.className = 'participant-item';
-                li.innerHTML = `
-                    <div class="color-badge" style="background-color: ${p.color}"></div>
-                    <span>${p.name}</span>
-                `;
-                participantList.appendChild(li);
-            });
-
-            // Actualizar lista de ganadores
-            const winnerList = document.getElementById('winnerList');
-            winnerList.innerHTML = '';
-            currentWinners.forEach(winner => {
-                const li = document.createElement('li');
-                li.className = 'winner-item';
-                li.innerHTML = `🏆 ${winner}`;
-                winnerList.appendChild(li);
-            });
-
-            // Habilitar/deshabilitar botón de girar
-            document.getElementById('spinBtn').disabled = currentParticipants.length < 2 || isSpinning;
-
-            // Dibujar ruleta
-            drawWheel();
+        function removeParticipant(id) {
+            // Eliminar de la lista local
+            participants = participants.filter(p => p.id !== id);
+            
+            // Si Firebase está disponible, eliminar también de allí
+            if (window.firebaseDatabase && currentSessionId) {
+                const database = window.firebaseDatabase;
+                const participantRef = ref(database, 'sessions/' + currentSessionId + '/participants/' + id);
+                remove(participantRef);
+            }
+            
+            // Actualizar la UI
+            updateParticipantsList();
+            drawRuleta();
+            saveToLocalStorage();
         }
 
-        function drawWheel() {
+        function updateParticipantsList() {
+            const container = document.getElementById('participantsList');
+            
+            if (participants.length === 0) {
+                container.innerHTML = '<div class="empty-message">No hay participantes aún. Agrega algunos nombres para comenzar.</div>';
+                return;
+            }
+            
+            container.innerHTML = participants.map(participant => `
+                <div class="list-item fade-in">
+                    <span>${participant.name}</span>
+                    <div class="list-item-actions">
+                        <button class="btn-icon btn-delete" onclick="removeParticipant('${participant.id}')">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateWinnersList() {
+            const container = document.getElementById('winnersList');
+            
+            if (winners.length === 0) {
+                container.innerHTML = '<div class="empty-message">Aún no hay ganadores. ¡Gira la ruleta!</div>';
+                return;
+            }
+            
+            container.innerHTML = winners.map(winner => `
+                <div class="list-item fade-in">
+                    <span>${winner.name}</span>
+                    <div class="list-item-actions">
+                        <button class="btn-icon btn-delete" onclick="removeWinner('${winner.id}')">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function drawRuleta() {
+            const canvas = document.getElementById('ruletaCanvas');
+            const ctx = canvas.getContext('2d');
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
-            const radius = 180;
-
+            const radius = Math.min(centerX, centerY) - 10;
+            
+            // Limpiar el canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if (currentParticipants.length === 0) {
-                // Dibujar círculo vacío
-                ctx.fillStyle = '#ddd';
+            
+            if (participants.length === 0) {
+                // Dibujar ruleta vacía
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
                 ctx.fill();
-                ctx.strokeStyle = '#999';
-                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                 ctx.stroke();
-
-                ctx.fillStyle = '#666';
-                ctx.font = '20px Arial';
+                
+                // Texto de "Agregar participantes"
+                ctx.font = 'bold 20px Arial';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
                 ctx.textAlign = 'center';
-                ctx.fillText('Sin participantes', centerX, centerY);
+                ctx.fillText('Agrega participantes', centerX, centerY - 10);
+                ctx.fillText('para comenzar', centerX, centerY + 20);
                 return;
             }
-
-            const sliceAngle = (2 * Math.PI) / currentParticipants.length;
-
-            currentParticipants.forEach((participant, i) => {
-                const startAngle = currentAngle + i * sliceAngle;
-                const endAngle = startAngle + sliceAngle;
-
+            
+            // Calcular ángulo por segmento
+            const anglePerSegment = (2 * Math.PI) / participants.length;
+            
+            // Dibujar segmentos
+            for (let i = 0; i < participants.length; i++) {
+                const startAngle = i * anglePerSegment;
+                const endAngle = (i + 1) * anglePerSegment;
+                
                 // Dibujar segmento
-                ctx.fillStyle = participant.color;
                 ctx.beginPath();
                 ctx.moveTo(centerX, centerY);
                 ctx.arc(centerX, centerY, radius, startAngle, endAngle);
                 ctx.closePath();
+                ctx.fillStyle = participants[i].color;
                 ctx.fill();
-
-                // Borde
                 ctx.strokeStyle = 'white';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 2;
                 ctx.stroke();
-
-                // Texto
+                
+                // Dibujar texto
                 ctx.save();
                 ctx.translate(centerX, centerY);
-                ctx.rotate(startAngle + sliceAngle / 2);
+                ctx.rotate(startAngle + anglePerSegment / 2);
+                ctx.textAlign = 'right';
                 ctx.fillStyle = 'white';
-                ctx.font = 'bold 16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(participant.name, radius / 1.5, 5);
+                ctx.font = 'bold 14px Arial';
+                
+                // Acortar nombres largos
+                let displayName = participants[i].name;
+                if (displayName.length > 10) {
+                    displayName = displayName.substring(0, 8) + '...';
+                }
+                
+                ctx.fillText(displayName, radius - 20, 5);
                 ctx.restore();
-            });
-
-            // Círculo central
-            ctx.fillStyle = 'white';
+            }
+            
+            // Dibujar círculo central
             ctx.beginPath();
-            ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
+            ctx.arc(centerX, centerY, 20, 0, 2 * Math.PI);
+            ctx.fillStyle = 'white';
             ctx.fill();
-            ctx.strokeStyle = '#667eea';
-            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
             ctx.stroke();
         }
 
-        async function spinWheel() {
-            if (isSpinning || currentParticipants.length < 2) return;
-
+        function spinRuleta() {
+            if (isSpinning) return;
+            
+            if (participants.length < 2) {
+                alert('Se necesitan al menos 2 participantes para girar la ruleta.');
+                return;
+            }
+            
             isSpinning = true;
             document.getElementById('spinBtn').disabled = true;
-
-            const spins = 5 + Math.random() * 5; // 5-10 vueltas
-            const duration = 5000; // 5 segundos
+            
+            const canvas = document.getElementById('ruletaCanvas');
+            const spinDuration = 5000; // 5 segundos
             const startTime = Date.now();
-            const startAngle = currentAngle;
-            const totalRotation = spins * 2 * Math.PI;
-
+            
+            // Número aleatorio de rotaciones completas (entre 5 y 10)
+            const fullRotations = 5 + Math.random() * 5;
+            
+            // Ángulo final (en radianes) - selecciona un segmento aleatorio
+            const winningSegment = Math.floor(Math.random() * participants.length);
+            const anglePerSegment = (2 * Math.PI) / participants.length;
+            const finalRotation = fullRotations * 2 * Math.PI + (winningSegment * anglePerSegment);
+            
+            // Animación de giro
             function animate() {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-
-                // Easing (desaceleración)
-                const easeOut = 1 - Math.pow(1 - progress, 3);
-                currentAngle = startAngle + totalRotation * easeOut;
-
-                drawWheel();
-
+                const currentTime = Date.now();
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / spinDuration, 1);
+                
+                // Easing function (easeOutCubic)
+                const easedProgress = 1 - Math.pow(1 - progress, 3);
+                
+                // Calcular rotación actual
+                const currentRotation = easedProgress * finalRotation;
+                
+                // Aplicar rotación al canvas
+                canvas.style.transform = `rotate(${currentRotation}rad)`;
+                
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    selectWinner();
+                    // La animación ha terminado
+                    finishSpin(winningSegment);
                 }
             }
-
+            
+            // Iniciar animación
             animate();
+            
+            // Simular sonido de giro (en una implementación real, usaríamos un archivo de audio)
+            console.log("🔊 Sonido de ruleta girando...");
         }
 
-        async function selectWinner() {
-            const sliceAngle = (2 * Math.PI) / currentParticipants.length;
+        function finishSpin(winningSegmentIndex) {
+            isSpinning = false;
+            document.getElementById('spinBtn').disabled = false;
             
-            // La flecha apunta hacia arriba (90 grados)
-            const pointerAngle = Math.PI / 2;
+            // Obtener el ganador
+            const winner = participants[winningSegmentIndex];
+            currentWinner = winner;
             
-            // Normalizar el ángulo actual
-            const normalizedAngle = ((2 * Math.PI - (currentAngle % (2 * Math.PI))) + pointerAngle) % (2 * Math.PI);
+            // Agregar a la lista de ganadores
+            const newWinner = {
+                id: 'winner_' + Date.now(),
+                name: winner.name,
+                timestamp: new Date().toISOString(),
+                visible: true
+            };
             
-            // Calcular el índice del ganador
-            const winnerIndex = Math.floor(normalizedAngle / sliceAngle) % currentParticipants.length;
-            const winner = currentParticipants[winnerIndex];
-
-            // Mostrar modal
-            document.getElementById('winnerName').textContent = winner.name;
-            document.getElementById('winnerModal').style.display = 'flex';
-
-            // Confetti
+            winners.push(newWinner);
+            
+            // Si Firebase está disponible, sincronizar
+            if (window.firebaseDatabase && currentSessionId) {
+                const database = window.firebaseDatabase;
+                const winnerRef = ref(database, 'sessions/' + currentSessionId + '/winners/' + newWinner.id);
+                set(winnerRef, {
+                    name: newWinner.name,
+                    timestamp: newWinner.timestamp,
+                    visible: newWinner.visible
+                });
+            }
+            
+            // Actualizar la lista de ganadores
+            updateWinnersList();
+            
+            // Mostrar modal de ganador
+            showWinnerModal(winner.name);
+            
+            // Efecto de confeti
             confetti({
                 particleCount: 150,
                 spread: 70,
                 origin: { y: 0.6 }
             });
-
-            // Actualizar Firestore
-            try {
-                const gameRef = doc(db, `artifacts/${appId}/public/data/games`, currentGameId);
-                await updateDoc(gameRef, {
-                    winners: arrayUnion(winner.name),
-                    participants: arrayRemove(winner)
-                });
-            } catch (error) {
-                console.error('Error al actualizar ganador:', error);
-            }
-
-            isSpinning = false;
-        }
-
-        window.closeWinnerModal = function() {
-            document.getElementById('winnerModal').style.display = 'none';
-        }
-
-        async function endGame() {
-            if (!currentGameId) return;
-
-            try {
-                const gameRef = doc(db, `artifacts/${appId}/public/data/games`, currentGameId);
-                await updateDoc(gameRef, {
-                    status: 'closed'
-                });
-
-                document.getElementById('participantInput').disabled = true;
-                document.getElementById('addBtn').disabled = true;
-                document.getElementById('spinBtn').disabled = true;
-                document.getElementById('endGameBtn').disabled = true;
-
-                alert('¡Juego finalizado! Ya no se pueden añadir más participantes.');
-            } catch (error) {
-                console.error('Error al finalizar juego:', error);
-            }
-        }
-
-        // ============= VISTA DE PARTICIPANTE =============
-        function showParticipantView(gameId) {
-            document.getElementById('hostView').style.display = 'none';
-            document.getElementById('participantView').style.display = 'block';
-
-            document.getElementById('joinBtn').addEventListener('click', () => joinGame(gameId));
             
-            document.getElementById('participantNameInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') joinGame(gameId);
+            // Simular sonido de ganador
+            console.log("🎉 ¡Sonido de celebración!");
+            
+            // Guardar en localStorage
+            saveToLocalStorage();
+        }
+
+        function showWinnerModal(winnerName) {
+            document.getElementById('winnerName').textContent = winnerName;
+            document.getElementById('winnerModal').classList.add('active');
+        }
+
+        function closeWinnerModal() {
+            document.getElementById('winnerModal').classList.remove('active');
+        }
+
+        function removeCurrentWinner() {
+            if (currentWinner) {
+                removeWinnerFromList(currentWinner.id);
+                currentWinner = null;
+            }
+            closeWinnerModal();
+        }
+
+        function removeWinner(id) {
+            removeWinnerFromList(id);
+        }
+
+        function removeWinnerFromList(id) {
+            // Eliminar de la lista local
+            winners = winners.filter(w => w.id !== id);
+            
+            // Si Firebase está disponible, eliminar también de allí
+            if (window.firebaseDatabase && currentSessionId) {
+                const database = window.firebaseDatabase;
+                const winnerRef = ref(database, 'sessions/' + currentSessionId + '/winners/' + id);
+                remove(winnerRef);
+            }
+            
+            // Actualizar la UI
+            updateWinnersList();
+            saveToLocalStorage();
+        }
+
+        function endGame() {
+            if (gameStatus === 'closed') {
+                alert('El juego ya está cerrado.');
+                return;
+            }
+            
+            if (confirm('¿Estás seguro de que quieres finalizar el juego? No se podrán agregar más participantes.')) {
+                gameStatus = 'closed';
+                
+                // Actualizar Firebase si está disponible
+                if (window.firebaseDatabase && currentSessionId) {
+                    const database = window.firebaseDatabase;
+                    const sessionRef = ref(database, 'sessions/' + currentSessionId + '/status');
+                    set(sessionRef, 'closed');
+                }
+                
+                // Actualizar la UI
+                updateSessionInfo();
+                document.getElementById('addParticipantBtn').disabled = true;
+                document.getElementById('participantName').disabled = true;
+                
+                // Guardar en localStorage
+                saveToLocalStorage();
+                
+                alert('Juego finalizado. No se aceptarán más participantes.');
+            }
+        }
+
+        function updateSessionInfo() {
+            document.getElementById('sessionId').textContent = currentSessionId || 'No iniciada';
+            
+            const statusElement = document.getElementById('gameStatus');
+            statusElement.textContent = gameStatus === 'open' ? 'Abierto' : 'Cerrado';
+            statusElement.className = 'game-status ' + (gameStatus === 'open' ? 'status-open' : 'status-closed');
+        }
+
+        function generateQRCode() {
+            if (!currentSessionId) return;
+            
+            // URL para participación remota
+            const joinUrl = `${window.location.origin}${window.location.pathname}?join=${currentSessionId}`;
+            
+            // Generar QR
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            QRCode.toCanvas(qrContainer, joinUrl, {
+                width: 200,
+                height: 200,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            }, function(error) {
+                if (error) console.error(error);
             });
         }
 
-        async function joinGame(gameId) {
-            const input = document.getElementById('participantNameInput');
-            const name = input.value.trim();
-            const messageDiv = document.getElementById('participantMessage');
+        function saveToLocalStorage() {
+            const appState = {
+                currentSessionId,
+                participants,
+                winners,
+                gameStatus
+            };
+            
+            localStorage.setItem('ruletaApp', JSON.stringify(appState));
+        }
 
-            if (!name) {
-                messageDiv.innerHTML = '<div class="message error">Por favor, escribe tu nombre.</div>';
-                return;
-            }
-
-            try {
-                const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
-                const gameSnap = await getDoc(gameRef);
-
-                if (!gameSnap.exists()) {
-                    messageDiv.innerHTML = '<div class="message error">El juego no existe.</div>';
-                    return;
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('ruletaApp');
+            
+            if (saved) {
+                try {
+                    const appState = JSON.parse(saved);
+                    currentSessionId = appState.currentSessionId;
+                    participants = appState.participants || [];
+                    winners = appState.winners || [];
+                    gameStatus = appState.gameStatus || 'closed';
+                    
+                    // Actualizar la UI
+                    updateSessionInfo();
+                    updateParticipantsList();
+                    updateWinnersList();
+                    
+                    // Si el juego está cerrado, deshabilitar ciertas funciones
+                    if (gameStatus === 'closed') {
+                        document.getElementById('addParticipantBtn').disabled = true;
+                        document.getElementById('participantName').disabled = true;
+                    }
+                } catch (e) {
+                    console.error('Error al cargar datos guardados:', e);
                 }
-
-                const gameData = gameSnap.data();
-
-                if (gameData.status !== 'open') {
-                    messageDiv.innerHTML = '<div class="message error">Lo sentimos, el juego ya ha finalizado.</div>';
-                    return;
-                }
-
-                const color = getRandomColor();
-                await updateDoc(gameRef, {
-                    participants: arrayUnion({ name, color })
-                });
-
-                messageDiv.innerHTML = '<div class="message success">¡Éxito! Has sido añadido al juego. 🎉</div>';
-                input.disabled = true;
-                document.getElementById('joinBtn').disabled = true;
-
-            } catch (error) {
-                console.error('Error al unirse al juego:', error);
-                messageDiv.innerHTML = '<div class="message error">Error al unirse al juego. Intenta de nuevo.</div>';
             }
         }
 
-        // ============= UTILIDADES =============
-        function getRandomColor() {
-            const colors = [
-                '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
-                '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B195', '#C06C84',
-                '#6C5B7B', '#F67280', '#355C7D', '#99B898', '#E84A5F'
-            ];
-            return colors[Math.floor(Math.random() * colors.length)];
-        }
+        // Hacer funciones disponibles globalmente para los event listeners
+        window.removeParticipant = removeParticipant;
+        window.removeWinner = removeWinner;
     </script>
 </body>
 </html>
